@@ -3,9 +3,30 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -24,7 +45,7 @@ import {
   BarChart3,
   LogOut,
   Settings,
-  ChevronDown,
+  ChevronsUpDown,
 } from "lucide-react";
 
 const navItems = [
@@ -36,14 +57,27 @@ const navItems = [
   { href: "/analysis", label: "分析解读", icon: BarChart3 },
 ];
 
+const pageTitles: Record<string, string> = {
+  "/dashboard": "首页",
+  "/brands": "品牌管理",
+  "/questions": "问题管理",
+  "/tasks": "任务管理",
+  "/qa-detail": "问答明细",
+  "/analysis": "分析解读",
+};
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
 
+  const currentTitle = Object.entries(pageTitles).find(([path]) =>
+    pathname.startsWith(path)
+  )?.[1] || "页面";
+
   if (loading) {
     return (
       <div className="flex min-h-screen">
-        <div className="w-56 border-r bg-card p-4 space-y-3">
+        <div className="w-[16rem] border-r bg-sidebar p-4 space-y-3">
           <Skeleton className="h-8 w-24" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
@@ -58,96 +92,113 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="flex w-56 flex-col border-r bg-card">
-        <div className="flex h-14 items-center px-5">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-              灵
-            </div>
-            <span className="text-base font-semibold">灵渡GEO</span>
-          </Link>
-        </div>
-        <Separator />
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href);
-            return (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={cn("w-full justify-start gap-2", isActive && "font-medium")}
-                  size="sm"
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <Link href="/dashboard">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+                    灵
+                  </div>
+                  <div className="flex flex-col gap-0.5 leading-none">
+                    <span className="font-semibold">灵渡GEO</span>
+                    <span className="text-xs text-muted-foreground">品牌监测平台</span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>导航</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navItems.map((item) => {
+                  const isActive = pathname.startsWith(item.href);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarFallback className="rounded-lg text-xs">
+                        {(user?.display_name || user?.username || "U")[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">
+                        {user?.display_name || user?.username}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {user?.role || "用户"}
+                      </span>
+                    </div>
+                    <ChevronsUpDown className="ml-auto size-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Button>
-              </Link>
-            );
-          })}
-        </nav>
-        <Separator />
-        <div className="p-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-2" size="sm">
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-xs">
-                    {(user?.display_name || user?.username || "U")[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="flex-1 truncate text-left text-xs">
-                  {user?.display_name || user?.username}
-                </span>
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                设置
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                退出登录
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <header className="flex h-14 items-center justify-between border-b bg-card px-6">
-          <div className="flex items-center gap-6">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "text-sm transition-colors",
-                  pathname.startsWith(item.href)
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="text-xs">
-                {(user?.display_name || "U")[0]}
-              </AvatarFallback>
-            </Avatar>
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    设置
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    退出登录
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbPage>{currentTitle}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
           </div>
         </header>
-        <div className="p-6">{children}</div>
-      </main>
-    </div>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <div className="pt-4">{children}</div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

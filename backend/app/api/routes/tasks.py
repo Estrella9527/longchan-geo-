@@ -54,12 +54,14 @@ async def start_task(task_id: str, db: AsyncSession = Depends(get_db), user: Use
     task = result.scalar_one_or_none()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task.status not in ("pending", "paused"):
+    if task.status not in ("pending", "paused", "failed"):
         raise HTTPException(status_code=400, detail=f"Cannot start task in {task.status} status")
+    # Dispatch to Celery worker
+    from app.tasks.execute_task import execute_monitoring_task
+    celery_result = execute_monitoring_task.delay(task_id)
     task.status = "running"
     await db.commit()
     await db.refresh(task)
-    # TODO: trigger actual task execution via Celery
     return TaskResponse.model_validate(task, from_attributes=True)
 
 
@@ -72,6 +74,20 @@ async def pause_task(task_id: str, db: AsyncSession = Depends(get_db), user: Use
     if task.status != "running":
         raise HTTPException(status_code=400, detail="Task is not running")
     task.status = "paused"
+    await db.commit()
+    await db.refresh(task)
+    return TaskResponse.model_validate(task, from_attributes=True)
+
+
+@router.post("/{task_id}/cancel", response_model=TaskResponse)
+async def cancel_task(task_id: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail=f"Task already {task.status}")
+    task.status = "cancelled"
     await db.commit()
     await db.refresh(task)
     return TaskResponse.model_validate(task, from_attributes=True)
