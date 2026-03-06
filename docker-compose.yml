@@ -19,6 +19,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    volumes:
+      - redisdata:/data
     ports:
       - "6380:6379"
     healthcheck:
@@ -32,7 +34,31 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/longchan_geo
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: change-me-in-production
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      LLM_API_BASE_URL: ${LLM_API_BASE_URL:-https://api.openai.com/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-gpt-4o-mini}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-worker:
+    build: ./backend
+    command: celery -A app.celery_app:celery_app worker --loglevel=info --concurrency=2
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/longchan_geo
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      LLM_API_BASE_URL: ${LLM_API_BASE_URL:-https://api.openai.com/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-gpt-4o-mini}
     volumes:
       - ./backend:/app
     depends_on:
@@ -60,3 +86,4 @@ services:
 
 volumes:
   pgdata:
+  redisdata:
