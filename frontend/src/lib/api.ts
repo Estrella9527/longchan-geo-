@@ -1,4 +1,13 @@
 import axios from "axios";
+import type {
+  Brand,
+  BrandCreate,
+  QuestionSet,
+  Question,
+  Task,
+  TaskResult,
+  UserInfo,
+} from "@/types";
 
 const api = axios.create({
   baseURL: "/api/v1",
@@ -26,5 +35,88 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// --- Auth ---
+export const authApi = {
+  login: (username: string, password: string) =>
+    api.post("/auth/login", { username, password }),
+  me: () => api.get<UserInfo>("/auth/me"),
+  initAdmin: () => api.post<UserInfo>("/auth/init-admin"),
+};
+
+// --- Brands ---
+export const brandApi = {
+  list: (params?: { keyword?: string; page?: number; page_size?: number }) =>
+    api.get<Brand[]>("/brands", { params }),
+  get: (id: string) => api.get<Brand>(`/brands/${id}`),
+  create: (data: BrandCreate) => api.post<Brand>("/brands", data),
+  update: (id: string, data: Partial<BrandCreate>) =>
+    api.put<Brand>(`/brands/${id}`, data),
+  delete: (id: string) => api.delete(`/brands/${id}`),
+};
+
+// --- Question Sets ---
+export const questionSetApi = {
+  list: (params?: { brand_id?: string }) =>
+    api.get<QuestionSet[]>("/questions/sets", { params }),
+  create: (data: { brand_id: string; name: string; description?: string }) =>
+    api.post<QuestionSet>("/questions/sets", data),
+  update: (id: string, data: { name?: string; description?: string }) =>
+    api.put<QuestionSet>(`/questions/sets/${id}`, data),
+  delete: (id: string) => api.delete(`/questions/sets/${id}`),
+};
+
+// --- Questions ---
+export const questionApi = {
+  list: (questionSetId: string) =>
+    api.get<Question[]>("/questions", { params: { question_set_id: questionSetId } }),
+  create: (data: { question_set_id: string; content: string; category?: string }) =>
+    api.post<Question>("/questions", data),
+  update: (id: string, data: { content?: string; category?: string }) =>
+    api.put<Question>(`/questions/${id}`, data),
+  batchCreate: (data: { question_set_id: string; questions: { content: string; category?: string }[] }) =>
+    api.post<Question[]>("/questions/batch", data),
+  reorder: (data: { question_ids: string[] }) =>
+    api.put("/questions/reorder", data),
+  delete: (id: string) => api.delete(`/questions/${id}`),
+};
+
+// --- Tasks ---
+export const taskApi = {
+  list: (params?: { brand_id?: string; task_status?: string; page?: number; page_size?: number }) =>
+    api.get<Task[]>("/tasks", { params }),
+  get: (id: string) => api.get<Task>(`/tasks/${id}`),
+  create: (data: { name: string; brand_id: string; question_set_id: string; task_type?: string; model_scene?: string; config?: Record<string, unknown> }) =>
+    api.post<Task>("/tasks", data),
+  start: (id: string) => api.post<Task>(`/tasks/${id}/start`),
+  pause: (id: string) => api.post<Task>(`/tasks/${id}/pause`),
+  cancel: (id: string) => api.post<Task>(`/tasks/${id}/cancel`),
+  delete: (id: string) => api.delete(`/tasks/${id}`),
+  results: (id: string, params?: { page?: number; page_size?: number }) =>
+    api.get<TaskResult[]>(`/tasks/${id}/results`, { params }),
+};
+
+// --- Analysis ---
+export const analysisApi = {
+  brand: (brandId: string, days: number = 30) =>
+    api.get(`/analysis/brand/${brandId}`, { params: { days } }),
+  competitor: (brandIds: string[]) =>
+    api.get("/analysis/competitor", { params: { brand_ids: brandIds.join(",") } }),
+  exportCsv: (taskId: string) =>
+    api.get(`/analysis/export/${taskId}`, { responseType: "blob" }),
+};
+
+// --- Dashboard Stats ---
+export interface DashboardStats {
+  brand_count: number;
+  question_set_count: number;
+  running_tasks: number;
+  completed_tasks: number;
+  total_tasks: number;
+}
+
+export const statsApi = {
+  dashboard: () => api.get<DashboardStats>("/stats/dashboard"),
+};
 
 export default api;

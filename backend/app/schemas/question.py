@@ -30,9 +30,18 @@ class QuestionCreate(BaseModel):
     category: str = ""
 
 
+class QuestionUpdate(BaseModel):
+    content: str | None = None
+    category: str | None = None
+
+
 class QuestionBatchCreate(BaseModel):
     question_set_id: str
     questions: list[dict]  # [{content, category}]
+
+
+class QuestionReorder(BaseModel):
+    question_ids: list[str]  # ordered list of question IDs
 
 
 class QuestionResponse(BaseModel):
