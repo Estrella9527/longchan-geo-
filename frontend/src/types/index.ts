@@ -70,6 +70,7 @@ export interface Task {
   task_type: string;
   status: string;
   model_scene: string;
+  provider_type: string;
   config: Record<string, unknown>;
   progress: number;
   total_questions: number;
@@ -89,5 +90,36 @@ export interface TaskResult {
   question_text: string;
   answer_text: string;
   sources: unknown[];
+  provider_type: string;
+  source_type: string;
+  ai_read_sources: string[];
+  response_time_ms: number;
   created_at: string;
+}
+
+// --- Crawled Page ---
+export interface CrawledPage {
+  id: string;
+  task_result_id: string;
+  url: string;
+  title: string;
+  text_content: string;
+  word_count: number;
+  crawl_success: boolean;
+  crawl_error: string | null;
+  crawled_at: string;
+}
+
+// --- Browser Session ---
+export interface BrowserSession {
+  id: string;
+  provider_name: string;
+  display_name: string;
+  status: string;
+  phone_number: string;
+  last_used_at: string | null;
+  last_health_check: string | null;
+  health_check_message: string | null;
+  created_at: string;
+  updated_at: string;
 }

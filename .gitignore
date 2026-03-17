@@ -17,3 +17,20 @@ pgdata/
 .vscode/
 .idea/
 *.swp
+
+# Debug screenshots
+*.png
+
+# Claude
+.claude/
+.claude-plugin/
+
+# Session data
+/sessions/
+labels/
+statuses/
+events.jsonl
+views.json
+config.json
+frontend/tsconfig.tsbuildinfo
+frontend/next-env.d.ts

@@ -19,4 +19,10 @@ celery_app.conf.update(
     task_track_started=True,
 )
 
-celery_app.autodiscover_tasks(["app.tasks"])
+celery_app.autodiscover_tasks(
+    ["app.tasks"],
+    related_name=None,
+)
+# Force import to ensure registration
+import app.tasks.execute_task  # noqa: F401
+import app.tasks.browser_tasks  # noqa: F401

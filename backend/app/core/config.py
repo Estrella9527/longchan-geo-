@@ -23,11 +23,28 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/2"
 
     # LLM (sync, for Celery worker)
-    LLM_API_BASE_URL: str = "https://api.openai.com/v1"
+    LLM_API_BASE_URL: str = "https://vibecodingapi.ai/v1"
     LLM_API_KEY: str = ""
-    LLM_DEFAULT_MODEL: str = "gpt-4o-mini"
+    LLM_DEFAULT_MODEL: str = "gemini-3.1-pro-preview"
     LLM_TIMEOUT_SECONDS: int = 120
     LLM_MAX_RETRIES: int = 3
+
+    # Available models (for frontend model selector)
+    LLM_AVAILABLE_MODELS: list[str] = [
+        "gemini-3.1-pro-preview",
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5-20251001",
+    ]
+
+    # CAPTCHA solver
+    CAPTCHA_VISION_MODEL: str = "claude-sonnet-4-6"
+    CAPTCHA_MAX_AUTO_RETRIES: int = 3
+    CAPTCHA_FALLBACK_TO_MANUAL: bool = True
+
+    # Browser sessions
+    BROWSER_SESSION_DIR: str = "/app/browser_data"
+    BROWSER_HEADLESS: bool = True
 
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:2888", "http://localhost:3000"]
