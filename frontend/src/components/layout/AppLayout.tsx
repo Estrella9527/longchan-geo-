@@ -46,6 +46,7 @@ import {
   LogOut,
   Settings,
   ChevronsUpDown,
+  Globe,
 } from "lucide-react";
 
 const navItems = [
@@ -55,6 +56,7 @@ const navItems = [
   { href: "/tasks", label: "任务管理", icon: ListTodo },
   { href: "/qa-detail", label: "问答明细", icon: FileText },
   { href: "/analysis", label: "分析解读", icon: BarChart3 },
+  { href: "/sessions", label: "会话管理", icon: Globe },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -64,6 +66,7 @@ const pageTitles: Record<string, string> = {
   "/tasks": "任务管理",
   "/qa-detail": "问答明细",
   "/analysis": "分析解读",
+  "/sessions": "会话管理",
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

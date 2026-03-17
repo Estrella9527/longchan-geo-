@@ -4,9 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.middleware.auth import get_current_user
-from app.models.task import Task, TaskResult
+from app.models.task import Task, TaskResult, CrawledPage
 from app.models.user import User
-from app.schemas.task import TaskCreate, TaskResponse, TaskResultResponse
+from app.schemas.task import TaskCreate, TaskResponse, TaskResultResponse, CrawledPageResponse
 
 router = APIRouter()
 
@@ -56,9 +56,12 @@ async def start_task(task_id: str, db: AsyncSession = Depends(get_db), user: Use
         raise HTTPException(status_code=404, detail="Task not found")
     if task.status not in ("pending", "paused", "failed"):
         raise HTTPException(status_code=400, detail=f"Cannot start task in {task.status} status")
-    # Dispatch to Celery worker
+    # Dispatch to Celery worker — route browser tasks to browser queue
     from app.tasks.execute_task import execute_monitoring_task
-    celery_result = execute_monitoring_task.delay(task_id)
+    if task.provider_type and task.provider_type.startswith("browser_"):
+        execute_monitoring_task.apply_async(args=[task_id], queue="browser")
+    else:
+        execute_monitoring_task.delay(task_id)
     task.status = "running"
     await db.commit()
     await db.refresh(task)
@@ -117,3 +120,15 @@ async def list_task_results(
     q = q.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(q)
     return [TaskResultResponse.model_validate(r, from_attributes=True) for r in result.scalars().all()]
+
+
+@router.get("/results/{result_id}/crawled-pages", response_model=list[CrawledPageResponse])
+async def list_crawled_pages(
+    result_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get crawled page content for a specific task result."""
+    q = select(CrawledPage).where(CrawledPage.task_result_id == result_id).order_by(CrawledPage.crawled_at)
+    result = await db.execute(q)
+    return [CrawledPageResponse.model_validate(r, from_attributes=True) for r in result.scalars().all()]

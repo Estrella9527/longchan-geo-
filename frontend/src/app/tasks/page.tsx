@@ -26,10 +26,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DataTable } from "@/components/data-table";
-import { Plus, Search, Play, Pause, Trash2 } from "lucide-react";
+import { Plus, Play, Pause, Trash2, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { brandApi, questionSetApi, taskApi } from "@/lib/api";
 import type { Brand, QuestionSet, Task } from "@/types";
 
@@ -39,6 +39,7 @@ const taskSchema = z.object({
   question_set_id: z.string().min(1, "请选择问题集"),
   model_scene: z.string(),
   task_type: z.string(),
+  provider_type: z.string(),
 });
 type TaskFormValues = z.infer<typeof taskSchema>;
 
@@ -50,7 +51,14 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
   paused: { label: "已暂停", variant: "outline" },
 };
 
+const providerMap: Record<string, string> = {
+  api: "API",
+  browser_doubao: "豆包浏览器",
+  browser_deepseek: "DeepSeek浏览器",
+};
+
 export default function TasksPage() {
+  const router = useRouter();
   const [data, setData] = useState<Task[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
@@ -60,7 +68,7 @@ export default function TasksPage() {
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: { name: "", brand_id: "", question_set_id: "", model_scene: "pc", task_type: "once" },
+    defaultValues: { name: "", brand_id: "", question_set_id: "", model_scene: "pc", task_type: "once", provider_type: "api" },
   });
 
   const selectedBrandId = form.watch("brand_id");
@@ -81,6 +89,14 @@ export default function TasksPage() {
   }, [activeTab]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Auto-refresh when there are running tasks
+  useEffect(() => {
+    const hasRunning = data.some((t) => t.status === "running");
+    if (!hasRunning) return;
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [data, fetchData]);
 
   // Load question sets when brand changes in form
   useEffect(() => {
@@ -124,6 +140,10 @@ export default function TasksPage() {
     { accessorKey: "name", header: "任务名称" },
     { accessorKey: "brand_id", header: "品牌", cell: ({ row }) => brandNameMap[row.getValue("brand_id") as string] || "-" },
     { accessorKey: "task_type", header: "类型", cell: ({ row }) => row.getValue("task_type") === "once" ? "单次" : "循环" },
+    { accessorKey: "provider_type", header: "执行方式", cell: ({ row }) => {
+      const pt = row.getValue("provider_type") as string || "api";
+      return <Badge variant="outline">{providerMap[pt] || pt}</Badge>;
+    }},
     {
       accessorKey: "status", header: "状态",
       cell: ({ row }) => {
@@ -140,7 +160,12 @@ export default function TasksPage() {
         const task = row.original;
         return (
           <div className="flex justify-end gap-1">
-            {(task.status === "pending" || task.status === "paused") && (
+            {(task.status === "completed" || task.status === "running") && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push(`/qa-detail?task=${task.id}`)} title="查看结果">
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {(task.status === "pending" || task.status === "paused" || task.status === "failed") && (
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStart(task.id)}>
                 <Play className="h-3.5 w-3.5" />
               </Button>
@@ -245,6 +270,19 @@ export default function TasksPage() {
                       <div className="flex items-center space-x-2"><RadioGroupItem value="api" id="api" /><Label htmlFor="api" className="font-normal">API调用</Label></div>
                     </RadioGroup>
                   </FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="provider_type" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>执行方式</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="选择执行方式" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="api">API 调用</SelectItem>
+                      <SelectItem value="browser_doubao">豆包浏览器</SelectItem>
+                      <SelectItem value="browser_deepseek">DeepSeek 浏览器</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </FormItem>
               )} />
               <FormField control={form.control} name="task_type" render={({ field }) => (

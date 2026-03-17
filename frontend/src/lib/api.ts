@@ -6,7 +6,9 @@ import type {
   Question,
   Task,
   TaskResult,
+  CrawledPage,
   UserInfo,
+  BrowserSession,
 } from "@/types";
 
 const api = axios.create({
@@ -86,7 +88,7 @@ export const taskApi = {
   list: (params?: { brand_id?: string; task_status?: string; page?: number; page_size?: number }) =>
     api.get<Task[]>("/tasks", { params }),
   get: (id: string) => api.get<Task>(`/tasks/${id}`),
-  create: (data: { name: string; brand_id: string; question_set_id: string; task_type?: string; model_scene?: string; config?: Record<string, unknown> }) =>
+  create: (data: { name: string; brand_id: string; question_set_id: string; task_type?: string; model_scene?: string; provider_type?: string; config?: Record<string, unknown> }) =>
     api.post<Task>("/tasks", data),
   start: (id: string) => api.post<Task>(`/tasks/${id}/start`),
   pause: (id: string) => api.post<Task>(`/tasks/${id}/pause`),
@@ -94,6 +96,30 @@ export const taskApi = {
   delete: (id: string) => api.delete(`/tasks/${id}`),
   results: (id: string, params?: { page?: number; page_size?: number }) =>
     api.get<TaskResult[]>(`/tasks/${id}/results`, { params }),
+  crawledPages: (resultId: string) =>
+    api.get<CrawledPage[]>(`/tasks/results/${resultId}/crawled-pages`),
+};
+
+// --- Browser Sessions ---
+export const sessionApi = {
+  list: () => api.get<BrowserSession[]>("/sessions").then((r) => r.data),
+  create: (data: { provider_name: string; display_name: string; phone_number?: string }) =>
+    api.post<BrowserSession>("/sessions", data),
+  activate: (id: string) => api.post(`/sessions/${id}/activate`),
+  healthCheck: (id: string) => api.post(`/sessions/${id}/health-check`),
+  delete: (id: string) => api.delete(`/sessions/${id}`),
+  authStart: (id: string, phone: string) =>
+    api.post(`/sessions/${id}/auth/start`, { phone_number: phone }),
+  authStatus: (id: string) =>
+    api.get<{ state: string; message?: string; screenshot?: string; captcha_type?: string; captcha_instruction?: string }>(`/sessions/${id}/auth/status`).then((r) => r.data),
+  authCode: (id: string, code: string) =>
+    api.post(`/sessions/${id}/auth/code`, { code }),
+  captchaData: (id: string) =>
+    api.get<{ screenshot: string; instruction: string; captcha_type: string }>(
+      `/sessions/${id}/auth/captcha`
+    ).then((r) => r.data),
+  captchaAction: (id: string, action: Record<string, unknown>) =>
+    api.post(`/sessions/${id}/auth/captcha`, action),
 };
 
 // --- Analysis ---

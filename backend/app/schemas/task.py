@@ -9,6 +9,7 @@ class TaskCreate(BaseModel):
     question_set_id: str
     task_type: str = "once"  # once | recurring
     model_scene: str = "pc"  # mobile | pc | api
+    provider_type: str = "api"  # api | browser_doubao | browser_deepseek
     config: dict = {}
 
 
@@ -20,6 +21,7 @@ class TaskResponse(BaseModel):
     task_type: str
     status: str
     model_scene: str
+    provider_type: str = "api"
     config: dict
     progress: int
     total_questions: int
@@ -39,4 +41,20 @@ class TaskResultResponse(BaseModel):
     question_text: str
     answer_text: str
     sources: list | dict
+    provider_type: str = "api"
+    source_type: str = "parsed"
+    ai_read_sources: list = []
+    response_time_ms: int = 0
     created_at: datetime
+
+
+class CrawledPageResponse(BaseModel):
+    id: str
+    task_result_id: str
+    url: str
+    title: str
+    text_content: str
+    word_count: int
+    crawl_success: bool
+    crawl_error: str | None = None
+    crawled_at: datetime
